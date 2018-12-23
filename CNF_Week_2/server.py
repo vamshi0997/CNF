@@ -3,52 +3,50 @@ import csv
 from threading import *
 
 def Main():
-	host = '127.0.0.1'
-	port = 5000
+    host = '127.0.0.1'
+    port = 6060
+    s = socket.socket()
+    s.bind((host, port))
+    s.listen(10)
+    print('Server Started..')
+    datalist = {}
+    with open('data.csv') as csv_file:
+        csv_reader = csv.reader(csv_file)
+        for row in csv_reader:
+            datalist[row[0]] = [row[1], row[2]]
+    print('dictionary completed')
+    while True:
+        conn, addr = s.accept()
+        fclient = conn.recv(1024).decode()
+        fclient = fclient.split(":")
+        rollno = fclient[1]
+        print(rollno)
+        temp = True
+        if fclient[0] == 'MARK-ATTENDANCE':
+            for i in datalist:
+                if i == fclient[1]:
+                    temp = False
+                    question = datalist[i][0]
+                    print(question)
+                    conn.send(('SECRETQUESTION-'+ question).encode())
+                    Thread(target = ser, args = (conn,datalist,rollno,question)).start()
+                    break
+        if temp:
+                conn.send('ROLL NUMBER NOT FOUND'.encode())
+                break
 
-	s = socket.socket()
-	s.bind((host,port))
-	s.listen(10)
-	print('server started....')
-	attlist = {}
-	with open('attlist.csv') as csv_file:
-		csv_reader = csv.reader(csv_file)
-		for row in csv_reader:
-			attlist[row[0]] = [row[1],row[2]]
-	personid = {}
-	person = []
+def ser(conn, datalist, roll, question):
+    while True:
+        fanswer = conn.recv(1024).decode()
+        fanswer = fanswer.split('-')
+        if fanswer[0] == 'SECRETANSWER':
+            print(datalist[roll][1])
+            if fanswer[1] == datalist[roll][1]:
+                conn.send('ATTENDANCE SUCCESS'.encode())
+            else:
+                conn.send('ATTENDANCE FAILURE'.encode())
+    conn.close()
 
-	while True:
-		c, addr = s.accept()
-		inpu = c.recv(1024).decode()
-		data = inpu.split()
-		roll = data[1]
-		temp = 1
-		if data[0] == 'MARK-ATTENDANCE':
-			for key, value in attlist.items():
-				if key == roll:
-					temp = 0
-					personid[c] = key
-					print(key + ' Started PUZZLE')
-					Thread(target = att, args = (attlist,c,personid,person)).start()
-			if temp:
-				c.send('ROLL NUMBER-NOT FOUND'.encode())
-	s.close()
-
-def att(attlist, c, personid,person):
-	nlist = attlist[personid[c]]
-	while True:
-
-		c.send(('SECRETQUESTION-' + nlist[0]).encode())
-		user_ans = c.recv(1024).decode().split('-')
-
-		if (user_ans[0] == 'SECRETANSWER'):
-			if (user_ans[1] == nlist[1]):
-				person.append(personid[c])
-				print(str(personid[c]) + '  Present')
-				c.send('ATTENDANCE SUCCESS'.encode())
-			else:
-				c.send('ATTENDANCE FAILURE'.encode())
 
 if __name__ == '__main__':
-	Main()
+    Main()

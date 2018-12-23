@@ -1,26 +1,34 @@
 import socket
 from threading import *
+def Main():
+    host = '127.0.0.1'
+    port = 6060
+    soc = socket.socket()
 
-host = '127.0.0.1'
-port = 5000
-soc = socket.socket()
-try:
     soc.connect((host, port))
-except:
-    print('error in server..')
-    return
-new = Thread(target = client_thread, args = (soc,)).start()
-while True:
-    data = soc.recv(1024).decode()
-    if (data == 'ATTENDANCE SUCCESS' or data == 'ROLL NUMBER-NOT FOUND'):
-        print(data)
-        break
-    print(data)
-soc.close()
-
-
-def server_thread(soc):
-    while True:
-        message = input()
-        soc.send(message.encode())
+    roll = input('MARK-ATTENDANCE:')
+    soc.send(('MARK-ATTENDANCE:' + roll).encode())
+    Thread(target = client_thread, args=(soc,)).start()
     soc.close()
+
+def client_thread(soc):
+    while True:
+        question = soc.recv(1024).decode()
+        print(question)
+        question = question.split("-")
+        if (question[0] == 'SECRETQUESTION'):
+            ans = input('respond to question:')
+            soc.send(('SECRETANSWER-'+ ans).encode())
+        if question[0] == 'ATTENDANCE SUCESS':
+            print('ATTENDANCE SUCESS')
+            break
+        if question[0] == 'ATTENDANCE FAILURE':
+            print('ATTENDANCE FAILURE')
+            break
+        if question[0] == 'ROLL NUMBER NOT FOUND':
+            print('you rollnumber are not existed')
+            break
+
+
+if __name__ == '__main__':
+    Main()
